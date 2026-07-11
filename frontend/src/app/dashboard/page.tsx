@@ -9,10 +9,10 @@ export default function DashboardOverviewPage() {
   const { user } = useAuth();
 
   const featuresList = [
-    { name: 'Tournament Brackets', desc: 'League points tables, matchups, fixtures & scores.', phase: 'Phase 2', icon: Trophy, color: 'text-violet-400', bg: 'bg-violet-500/10' },
-    { name: 'Stadium & IoT Digital Twin', desc: 'Digital twin floor mapping, VIP zone settings, lighting.', phase: 'Phase 3', icon: Building2, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-    { name: 'Stripe Booking & QR Tickets', desc: 'Interactive seat selection, QR code verification.', phase: 'Phase 4', icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-    { name: 'Realtime Incident Dispatch', desc: 'Access logs, emergency exits tracking, safety alarms.', phase: 'Phase 5', icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+    { name: 'Tournament Brackets', desc: 'League standings, Berger fixtures, and scores.', status: 'Active', link: '/dashboard/tournaments', icon: Trophy, color: 'text-violet-400', bg: 'bg-violet-500/10' },
+    { name: 'Seat & Venue Maps', desc: 'Interactive matches ticketing and checkout layouts.', status: 'Active', link: '/dashboard/tickets', icon: Ticket, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+    { name: 'Live Match Center', desc: 'Live scoreboard, updates timeline logs, and goals.', status: 'Active', link: '/dashboard/matches', icon: Building2, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+    { name: 'Realtime Dispatch & Alerts', desc: 'Live push feeds, emergency alarms, and notifications.', status: 'Active', link: '/dashboard/notifications', icon: ShieldAlert, color: 'text-rose-400', bg: 'bg-rose-500/10' },
   ];
 
   return (
@@ -116,22 +116,22 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="border-t border-white/5 pt-4 mt-2 flex justify-between items-center text-xs text-slate-500">
               <span>Referee: Michael Oliver</span>
-              <span className="px-2.5 py-1 rounded bg-white/5 border border-white/5 text-slate-400 font-semibold">Buy Ticket</span>
+              <Link href="/dashboard/tickets" className="px-2.5 py-1 rounded bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 font-semibold">Buy Ticket</Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Roadmap Modules List */}
+      {/* Active Modules List */}
       <div>
-        <h2 className="text-xl font-bold text-white mb-6">Operations Modules Roadmap</h2>
+        <h2 className="text-xl font-bold text-white mb-6">Operations Modules</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuresList.map((f, i) => {
             const Icon = f.icon;
             return (
-              <div key={i} className="p-6 rounded-2xl glass-dark border border-white/5 flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-2 right-2 text-[10px] font-bold text-indigo-400/50 bg-indigo-600/10 border border-indigo-500/20 px-2 py-0.5 rounded-md">
-                  {f.phase}
+              <Link href={f.link} key={i} className="hover:scale-[1.02] hover:border-white/10 transition-all flex flex-col justify-between p-6 rounded-2xl glass-dark border border-white/5 relative overflow-hidden text-left">
+                <div className="absolute top-2 right-2 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                  {f.status}
                 </div>
                 <div>
                   <div className={`p-2.5 rounded-xl ${f.bg} ${f.color} w-fit mb-4`}>
@@ -141,9 +141,9 @@ export default function DashboardOverviewPage() {
                   <p className="text-slate-500 text-xs leading-relaxed">{f.desc}</p>
                 </div>
                 <div className="border-t border-white/5 pt-4 mt-4 text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                  Status: <span className="text-slate-400">Scheduled for implementation</span>
+                  Click to launch →
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

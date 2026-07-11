@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import prisma from '../config/db.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
+import QRCode from 'qrcode';
+import { sendTicketReceiptEmail } from '../utils/email.js';
 
 const purchaseSchema = z.object({
   matchId: z.string(),
@@ -59,6 +61,11 @@ export async function purchaseTicket(req: AuthenticatedRequest, res: Response, n
 
     const body = purchaseSchema.parse(req.body);
 
+    const userRecord = await prisma.user.findUnique({ where: { id: userId } });
+    if (!userRecord) {
+      return res.status(404).json({ success: false, message: 'User record not found' });
+    }
+
     // 1. Verify match exists
     const match = await prisma.match.findUnique({ where: { id: body.matchId } });
     if (!match) {
@@ -80,6 +87,9 @@ export async function purchaseTicket(req: AuthenticatedRequest, res: Response, n
       return res.status(400).json({ success: false, message: 'This seat is already booked' });
     }
 
+    // Generate base64 QR code data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(`smart-stadium-ticket-ref:${body.matchId}-${body.seatZone}-${body.seatNumber}`);
+
     // 3. Create Ticket and simulate payment transaction inside Prisma
     const result = await prisma.$transaction(async (tx) => {
       // Create booking
@@ -99,7 +109,7 @@ export async function purchaseTicket(req: AuthenticatedRequest, res: Response, n
           bookingId: booking.id,
           seatNumber: body.seatNumber,
           zone: body.seatZone,
-          qrCode: `QR-${booking.id}-${body.seatZone}-${body.seatNumber}`,
+          qrCode: qrCodeDataUrl,
         }
       });
 
@@ -116,6 +126,9 @@ export async function purchaseTicket(req: AuthenticatedRequest, res: Response, n
 
       return ticket;
     });
+
+    // Send ticket invoice email in background
+    sendTicketReceiptEmail(userRecord.email, userRecord.name, result.bookingId, body.seatZone, body.seatNumber, body.price);
 
     await prisma.activityLog.create({
       data: {

@@ -95,6 +95,32 @@ export default function TicketsPage() {
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchMatches(), fetchMyTickets()]).finally(() => setLoading(false));
+
+    // Handle return redirect from Stripe checkout (real or mock)
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const mId = params.get('matchId');
+    const zName = params.get('seatZone');
+    const sNum = params.get('seatNumber');
+    const uPrice = params.get('price');
+
+    if (sessionId && mId && zName && sNum && uPrice) {
+      api.post('/tickets/purchase', {
+        matchId: mId,
+        seatZone: decodeURIComponent(zName),
+        seatNumber: decodeURIComponent(sNum),
+        price: parseFloat(uPrice),
+      })
+      .then(() => {
+        setActionSuccess('Payment verified successfully! Welcome to the Arena.');
+        fetchMyTickets();
+        setActiveTab('mine');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .catch((err) => {
+        console.error('Redirect confirmation failed', err);
+      });
+    }
   }, []);
 
   const handleZoneChange = (zone: string) => {
@@ -118,22 +144,23 @@ export default function TicketsPage() {
     setActionError(null);
 
     try {
-      await api.post('/tickets/purchase', {
+      const res = await api.post('/payments/create-checkout-session', {
         matchId: selectedMatch.id,
         seatZone,
         seatNumber,
         price
       });
 
-      setActionSuccess('Purchase successful! Your QR ticket is ready.');
-      setSelectedMatch(null);
-      fetchMyTickets();
-      setActiveTab('mine');
-      setTimeout(() => setActionSuccess(null), 3000);
+      if (res.data && res.data.url) {
+        // Redirect client browser directly to Stripe gateway
+        window.location.href = res.data.url;
+      } else {
+        setActionError('Failed to load gateway URL.');
+        setSubmitting(false);
+      }
     } catch (err: unknown) {
-      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Transaction failed';
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Redirect to checkout failed';
       setActionError(errorMsg);
-    } finally {
       setSubmitting(false);
     }
   };
@@ -277,12 +304,18 @@ export default function TicketsPage() {
 
                 {/* QR Access verification code card */}
                 <div className="flex items-center gap-3.5 pt-4 border-t border-white/5">
-                  <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center p-1">
-                    <QrCode className="h-8 w-8 text-black" />
+                  <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center p-0.5 overflow-hidden">
+                    {t.qrCode && t.qrCode.startsWith('data:') ? (
+                      <img src={t.qrCode} alt="QR Code" className="h-full w-full object-contain" /> // eslint-disable-line @next/next/no-img-element
+                    ) : (
+                      <QrCode className="h-8 w-8 text-black" />
+                    )}
                   </div>
                   <div>
                     <div className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Gate Check Code</div>
-                    <div className="text-[9px] text-slate-400 font-mono">{t.qrCode || 'N/A'}</div>
+                    <div className="text-[9px] text-slate-400 font-mono">
+                      {t.qrCode && t.qrCode.startsWith('data:') ? t.id.slice(0, 12).toUpperCase() : (t.qrCode || 'N/A')}
+                    </div>
                   </div>
                   <div className="ml-auto text-right">
                     <span className="text-[10px] font-extrabold text-indigo-400 flex items-center justify-end"><DollarSign className="h-3 w-3" /> {t.booking.payment?.amount || 40}</span>

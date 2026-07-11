@@ -4,6 +4,7 @@ import prisma from '../config/db.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { Role } from '@prisma/client';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -67,6 +68,11 @@ export async function register(req: Request, res: Response, next: NextFunction) 
         otpExpires,
       },
     });
+
+    // Dispatch Verification Email
+    if (!isVerified && otp) {
+      sendVerificationEmail(user.email, user.name, otp);
+    }
 
     // Create profile depending on role
     if (user.role === Role.PLAYER) {
@@ -363,6 +369,9 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
         resetTokenExpires,
       },
     });
+
+    // Dispatch Reset Email
+    sendPasswordResetEmail(user.email, user.name, resetToken);
 
     await prisma.activityLog.create({
       data: {
