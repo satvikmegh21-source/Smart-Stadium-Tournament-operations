@@ -17,6 +17,8 @@ import ticketRoutes from './routes/ticketRoutes.js';
 import partnershipRoutes from './routes/partnershipRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -96,6 +98,8 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/partnerships', partnershipRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
