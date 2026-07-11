@@ -1,0 +1,370 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  TOURNAMENT_ORGANIZER
+  STADIUM_MANAGER
+  TEAM_MANAGER
+  COACH
+  PLAYER
+  REFEREE
+  SECURITY_STAFF
+  MEDICAL_STAFF
+  TICKET_INSPECTOR
+  VENDOR
+  SPECTATOR
+  SPONSOR
+  MEDIA
+}
+
+enum TournamentFormat {
+  LEAGUE
+  KNOCKOUT
+  ROUND_ROBIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum MedicalStatus {
+  PENDING
+  DISPATCHED
+  RESOLVED
+}
+
+model User {
+  id                 String          @id @default(uuid())
+  email              String          @unique
+  passwordHash       String
+  name               String
+  role               Role            @default(SPECTATOR)
+  isVerified         Boolean         @default(false)
+  verificationToken  String?
+  resetToken         String?
+  resetTokenExpires  DateTime?
+  otp                String?
+  otpExpires         DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  
+  // Relations
+  sessions           Session[]
+  activityLogs       ActivityLog[]
+  playerProfile      Player?
+  coachProfile       Coach?
+  refereeProfile     Referee?
+  bookings           Booking[]
+  medicalRequests    MedicalRequest[]
+  incidentReports    IncidentReport[] @relation("ReportedBy")
+  assignedIncidents  IncidentReport[] @relation("AssignedTo")
+  vendorProfile      Vendor?
+  sponsorProfile     Sponsor?
+  mediaPass          MediaPass?
+  notifications      Notification[]
+  validatedTickets   Ticket[]         @relation("ValidatedBy")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  ipAddress String?
+  device    String?
+  expiresAt DateTime
+  isValid   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  ipAddress String?
+  device    String?
+  details   String?
+  timestamp DateTime @default(now())
+}
+
+model Team {
+  id             String        @id @default(uuid())
+  name           String        @unique
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  // Relations
+  coachId        String?       @unique
+  coach          Coach?        @relation("TeamCoach", fields: [coachId], references: [id])
+  players        Player[]
+  tournaments    Tournament[]  @relation("TournamentTeams")
+  matchesAsTeam1 Match[]       @relation("Team1Matches")
+  matchesAsTeam2 Match[]       @relation("Team2Matches")
+  pointsEntries  PointsTable[]
+}
+
+model Player {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId         String?
+  team           Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  position       String?
+  jerseyNumber   Int?
+  birthDate      DateTime?
+  fitnessStatus  String   @default("FIT") // FIT, INJURED, RECOVERING
+  medicalHistory String?
+  statistics     Json?    // Goals, assists, yellow/red cards, minutes played
+  availability   Boolean  @default(true)
+  suspensionEnd  DateTime?
+  transferHistory Json?    // Array of transfer objects
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Coach {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseLevel     String?
+  trainingSessions Json?             // Schedule and descriptions of training sessions
+  performanceLogs  Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Relations
+  team             Team?             @relation("TeamCoach")
+}
+
+model Referee {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseLevel String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  matches      Match[]
+}
+
+model Stadium {
+  id                 String           @id @default(uuid())
+  name               String           @unique
+  city               String
+  capacity           Int
+  groundType         String           // Grass, Turf, Hybrid
+  seatMapJson        Json?            // Interactive seat layout definition
+  vipZonesJson       Json?            // Details about VIP boxes
+  parkingCapacity    Int              @default(0)
+  lightingStatus     String           @default("OPERATIONAL")
+  maintenanceLogs    Json?            // Array of logs
+  equipmentInventory Json?            // Sports/Stadium equipment items
+  securityZones      Json?            // Mapping of security placements
+  emergencyExitsJson Json?            // Evacuation paths
+  bookingCalendar    Json?            // Calendar schedules
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  
+  // Relations
+  matches            Match[]
+}
+
+model Tournament {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  format       TournamentFormat @default(LEAGUE)
+  startDate    DateTime
+  endDate      DateTime
+  rulesJson    Json?
+  prizeDetails String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  
+  // Relations
+  teams        Team[]           @relation("TournamentTeams")
+  matches      Match[]
+  pointsTables PointsTable[]
+}
+
+model Match {
+  id                 String      @id @default(uuid())
+  tournamentId       String
+  tournament         Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  stadiumId          String
+  stadium            Stadium     @relation(fields: [stadiumId], references: [id])
+  team1Id            String
+  team1              Team        @relation("Team1Matches", fields: [team1Id], references: [id])
+  team2Id            String
+  team2              Team        @relation("Team2Matches", fields: [team2Id], references: [id])
+  refereeId          String?
+  referee            Referee?    @relation(fields: [refereeId], references: [id], onDelete: SetNull)
+  date               DateTime
+  status             MatchStatus @default(SCHEDULED)
+  score1             Int         @default(0)
+  score2             Int         @default(0)
+  penaltyScore1      Int?
+  penaltyScore2      Int?
+  liveTimelineJson   Json?       // Timeline of events (goals, cards, VAR logs, subs)
+  substitutionsJson  Json?
+  cardsJson          Json?
+  goalsJson          Json?
+  varLogsJson        Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  
+  // Relations
+  bookings           Booking[]
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchId        String
+  match          Match         @relation(fields: [matchId], references: [id])
+  ticketsCount   Int
+  totalPrice     Float
+  status         BookingStatus @default(PENDING)
+  paymentIntentId String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  // Relations
+  tickets        Ticket[]
+  payment        Payment?
+}
+
+model Ticket {
+  id                String    @id @default(uuid())
+  bookingId         String
+  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seatNumber        String
+  zone              String
+  qrCode            String?   @unique
+  isValidated       Boolean   @default(false)
+  validatedAt       DateTime?
+  validatedByUserId String?
+  validatedByUser   User?     @relation("ValidatedBy", fields: [validatedByUserId], references: [id], onDelete: SetNull)
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  bookingId      String   @unique
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount         Float
+  status         String   // PENDING, SUCCESSFUL, FAILED, REFUNDED
+  method         String   // STRIPE, CARD, etc.
+  transactionId  String   @unique
+  createdAt      DateTime @default(now())
+}
+
+model Sponsor {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName         String
+  logoUrl             String?
+  packagesJson        Json?    // Information about sponsor packages
+  bannerPlacementsJson Json?
+  adsJson             Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Vendor {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName String
+  stallNumber  String?
+  menuJson     Json?    // Food menu and pricing
+  salesJson    Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MedicalRequest {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String        // EMERGENCY, ASSISTANCE, INJURY
+  details      String
+  status       MedicalStatus @default(PENDING)
+  location     String?       // Section/Seat/Zone in stadium
+  ambulanceId  String?       // If ambulance dispatched
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model IncidentReport {
+  id           String   @id @default(uuid())
+  reporterId   String
+  reportedBy   User     @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo   User?    @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  description  String
+  location     String
+  severity     String   // LOW, MEDIUM, HIGH, CRITICAL
+  status       String   // LOGGED, INVESTIGATING, RESOLVED
+  actionTaken  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MediaPass {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       String
+  accreditationTypes Json?    // Press Box, Pitch Side, Mixed Zone
+  status             String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model PointsTable {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  played       Int        @default(0)
+  won          Int        @default(0)
+  drawn        Int        @default(0)
+  lost         Int        @default(0)
+  points       Int        @default(0)
+  goalsFor     Int        @default(0)
+  goalsAgainst Int        @default(0)
+}
