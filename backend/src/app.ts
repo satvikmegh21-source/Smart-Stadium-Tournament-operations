@@ -11,6 +11,10 @@ import tournamentRoutes from './routes/tournamentRoutes.js';
 import playerRoutes from './routes/playerRoutes.js';
 import coachRoutes from './routes/coachRoutes.js';
 import refereeRoutes from './routes/refereeRoutes.js';
+import matchRoutes from './routes/matchRoutes.js';
+import incidentRoutes from './routes/incidentRoutes.js';
+import ticketRoutes from './routes/ticketRoutes.js';
+import partnershipRoutes from './routes/partnershipRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -84,6 +88,10 @@ app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/coaches', coachRoutes);
 app.use('/api/referees', refereeRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/incidents', incidentRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/partnerships', partnershipRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
