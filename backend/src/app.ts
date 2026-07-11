@@ -6,6 +6,11 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import teamRoutes from './routes/teamRoutes.js';
+import tournamentRoutes from './routes/tournamentRoutes.js';
+import playerRoutes from './routes/playerRoutes.js';
+import coachRoutes from './routes/coachRoutes.js';
+import refereeRoutes from './routes/refereeRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -74,6 +79,11 @@ app.get('/health', (req, res) => {
 // Route mounting
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/players', playerRoutes);
+app.use('/api/coaches', coachRoutes);
+app.use('/api/referees', refereeRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
