@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
-import swaggerJsDoc from 'swagger-jsdoc';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
@@ -20,6 +19,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
+import swaggerSpec from './config/swagger.js';
 
 const app = express();
 
@@ -49,35 +49,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Swagger Config
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Smart Stadium & Tournament Operations API',
-      version: '1.0.0',
-      description: 'API Documentation for the Smart Stadium Platform',
-    },
-    servers: [
-      {
-        url: process.env.BACKEND_URL || 'http://localhost:5000',
-        description: 'Development server',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-  },
-  apis: ['./src/routes/*.ts', './dist/routes/*.js'],
-};
-
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health Check
 app.get('/health', (req, res) => {
