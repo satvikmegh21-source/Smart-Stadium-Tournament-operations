@@ -26,7 +26,6 @@ COPY prisma ./prisma
 
 RUN npx prisma generate
 
-COPY dist ./dist
 
 # Copy built code and generated prisma
 COPY --from=builder /app/dist ./dist
