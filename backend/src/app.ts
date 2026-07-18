@@ -22,7 +22,9 @@ import { errorHandler } from './middleware/errorMiddleware.js';
 import swaggerSpec from './config/swagger.js';
 
 const app = express();
-
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
 // Security Middleware
 app.use(helmet());
 
