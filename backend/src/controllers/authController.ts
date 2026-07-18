@@ -71,7 +71,7 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 
     // Dispatch Verification Email
     if (!isVerified && otp) {
-      sendVerificationEmail(user.email, user.name, otp);
+      await sendVerificationEmail(user.email, user.name, otp);
     }
 
     // Create profile depending on role
@@ -99,21 +99,16 @@ export async function register(req: Request, res: Response, next: NextFunction) 
     });
 
     res.status(201).json({
-      success: true,
-      message: 'Registration successful. Verification email/OTP sent.',
-      data: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isVerified: user.isVerified,
-        // In local development, return verificationToken and OTP for direct access
-        debug: {
-          verificationToken,
-          otp,
-        },
-      },
-    });
+  success: true,
+  message: 'Registration successful. Verification email sent.',
+  data: {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    isVerified: user.isVerified,
+  },
+});
   } catch (err) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ success: false, message: 'Validation failed', errors: err.errors });
